@@ -4,16 +4,16 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/silenceper/wechat/cache"
-	"github.com/silenceper/wechat/context"
-	"github.com/silenceper/wechat/js"
-	"github.com/silenceper/wechat/material"
-	"github.com/silenceper/wechat/menu"
-	"github.com/silenceper/wechat/oauth"
-	"github.com/silenceper/wechat/server"
-	"github.com/silenceper/wechat/template"
-	"github.com/silenceper/wechat/user"
-	"github.com/silenceper/wechat/pay"
+	"github.com/wxkj001/wechat/cache"
+	"github.com/wxkj001/wechat/context"
+	"github.com/wxkj001/wechat/js"
+	"github.com/wxkj001/wechat/material"
+	"github.com/wxkj001/wechat/menu"
+	"github.com/wxkj001/wechat/oauth"
+	"github.com/wxkj001/wechat/server"
+	"github.com/wxkj001/wechat/template"
+	"github.com/wxkj001/wechat/user"
+	"github.com/wxkj001/wechat/pay"
 )
 
 // Wechat struct

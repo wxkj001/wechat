@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/silenceper/wechat/context"
-	"github.com/silenceper/wechat/util"
+	"github.com/wxkj001/wechat/context"
+	"github.com/wxkj001/wechat/util"
 )
 
 var payGateway = "https://api.mch.weixin.qq.com/pay/unifiedorder"
@@ -76,13 +76,65 @@ type payRequest struct {
 	OpenID         string `xml:"openid,omitempty"`      //用户标识
 	SceneInfo      string `xml:"scene_info,omitempty"`  //场景信息
 }
+//jssdk 参数
+type ChooseWXPay struct {
+	Timestamp int64  `json:"timestamp"`
+	NonceStr  string `json:"nonceStr"`
+	Package   string `json:"package"`
+	SignType  string `json:"signType"`
+	PaySign   string `json:"paySign"`
+}
 
 // NewPay return an instance of Pay package
 func NewPay(ctx *context.Context) *Pay {
 	pay := Pay{Context: ctx}
 	return &pay
 }
+//统一下单 返回jssdk信息
+func (pcf *Pay)Unify(p *Params) (ChooseWXPay,error) {
+	nonceStr := util.RandomStr(32)
+	tradeType := "JSAPI"
+	template := "appid=%s&body=%s&mch_id=%s&nonce_str=%s&notify_url=%s&openid=%s&out_trade_no=%s&spbill_create_ip=%s&total_fee=%s&trade_type=%s&key=%s"
+	str := fmt.Sprintf(template, pcf.AppID, p.Body, pcf.PayMchID, nonceStr, pcf.PayNotifyURL, p.OpenID, p.OutTradeNo, p.CreateIP, p.TotalFee, tradeType, pcf.PayKey)
+	sign := util.MD5Sum(str)
+	request := payRequest{
+		AppID:          pcf.AppID,
+		MchID:          pcf.PayMchID,
+		NonceStr:       nonceStr,
+		Sign:           sign,
+		Body:           p.Body,
+		OutTradeNo:     p.OutTradeNo,
+		TotalFee:       p.TotalFee,
+		SpbillCreateIP: p.CreateIP,
+		NotifyURL:      pcf.PayNotifyURL,
+		TradeType:      tradeType,
+		OpenID:         p.OpenID,
+	}
+	rawRet, err := util.PostXML(payGateway, request)
+	if err != nil {
+		return ChooseWXPay{}, errors.New(err.Error() + " parameters : " + str)
+	}
+	payRet := payResult{}
+	err = xml.Unmarshal(rawRet, &payRet)
+	if err != nil {
+		return ChooseWXPay{}, errors.New(err.Error())
+	}
+	if payRet.ReturnCode == "SUCCESS" {
+		//pay success
+		if payRet.ResultCode == "SUCCESS" {
+			return ChooseWXPay{
+				int64(util.GetCurrTs()),
+				util.RandomStr(32),
+				"prepay_id="+payRet.PrePayID,
+				"MD5",
+				sign,
 
+			}, nil
+		}
+		return ChooseWXPay{}, errors.New(payRet.ErrCode + payRet.ErrCodeDes)
+	}
+	return ChooseWXPay{}, errors.New("[msg : xmlUnmarshalError] [rawReturn : " + string(rawRet) + "] [params : " + str + "] [sign : " + sign + "]")
+}
 // PrePayID will request wechat merchant api and request for a pre payment order id
 func (pcf *Pay) PrePayID(p *Params) (prePayID string, err error) {
 	nonceStr := util.RandomStr(32)
