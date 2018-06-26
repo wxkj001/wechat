@@ -7,6 +7,7 @@ import (
 
 	"github.com/wxkj001/wechat/context"
 	"github.com/wxkj001/wechat/util"
+	"io/ioutil"
 )
 
 var payGateway = "https://api.mch.weixin.qq.com/pay/unifiedorder"
@@ -76,6 +77,36 @@ type payRequest struct {
 	OpenID         string `xml:"openid,omitempty"`      //用户标识
 	SceneInfo      string `xml:"scene_info,omitempty"`  //场景信息
 }
+type Notify struct {
+	ReturnCode         string `xml:"return_code"`
+	ReturnMsg          string `xml:"return_msg"`
+	ResultCode         string `xml:"result_code"`
+	AppID              string `xml:"appid"`
+	MchID              string `xml:"mch_id"`
+	DeviceInfo         string `xml:"device_info"`
+	NonceStr           string `xml:"nonce_str"`
+	Sign               string `xml:"sign"`
+	SignType           string `xml:"sign_type"`
+	ErrCode            string `xml:"err_code"`
+	ErrCodeDes         string `xml:"err_code_des"`
+	OpenID             string `xml:"openid"`
+	IsSubscribe        string `xml:"is_subscribe"`
+	TradeType          string `xml:"trade_type"`
+	BankType           string `xml:"bank_type"`
+	TotalFee           string `xml:"total_fee"`
+	SettlementTotalFee string `xml:"settlement_total_fee"`
+	FeeType            string `xml:"fee_type"`
+	CashFee            string `xml:"cash_fee"`
+	CashFeeType        string `xml:"cash_fee_type"`
+	CouponFee          string `xml:"coupon_fee"`
+	CouponCount        string `xml:"coupon_count"`
+	//CouponType  string
+	//CouponID    string
+	TransactionID      string `xml:"transaction_id"`
+	OutTradeNo         string `xml:"out_trade_no"`
+	Attach             string `xml:"attach"`
+	TimeEnd            string `xml:"time_end"`
+}
 //jssdk 参数
 type ChooseWXPay struct {
 	Timestamp int64  `json:"timestamp"`
@@ -90,6 +121,19 @@ func NewPay(ctx *context.Context) *Pay {
 	pay := Pay{Context: ctx}
 	return &pay
 }
+
+//支付异步通知
+func (pcf *Pay)Notify(f func(message Notify)string) string {
+	defer pcf.Request.Body.Close()
+	result, err := ioutil.ReadAll(pcf.Request.Body)
+	if err!=nil{
+		return ""
+	}
+	var notify Notify
+	xml.Unmarshal(result,&notify)
+	return f(notify)
+}
+
 //统一下单 返回jssdk信息
 func (pcf *Pay)Unify(p *Params) (ChooseWXPay,error) {
 	nonceStr := util.RandomStr(32)
